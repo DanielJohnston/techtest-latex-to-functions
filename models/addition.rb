@@ -1,0 +1,2 @@
+class Addition < Expression
+end

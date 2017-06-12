@@ -1,0 +1,2 @@
+class Multiplication < Expression
+end
