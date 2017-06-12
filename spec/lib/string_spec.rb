@@ -1,3 +1,5 @@
+# This is super dubious in a unit test
+require './app'
 
 describe String do
   describe '#objectify' do
