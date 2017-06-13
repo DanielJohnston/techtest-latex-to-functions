@@ -1,4 +1,4 @@
-# This is super dubious in a unit test
+# This should not need to happen, presumably getting required
 require './app'
 
 describe String do

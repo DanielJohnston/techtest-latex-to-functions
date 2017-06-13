@@ -1,18 +1,38 @@
 class String
   def objectify
-    # Addition match and translate
-    add_matcher = /\A(-?[0-9a-z]+)\+([0-9a-z]+)\z/
-    unless self[add_matcher, 0].nil?
-      left_side = self[add_matcher, 1].to_apropos
-      right_side = self[add_matcher, 2].to_apropos
-      return Addition.new(left_side, right_side)
-    end
-  end
+    # self is the current fragment of LaTeX
 
-  def to_apropos
-    puts self
-    return self.to_s.to_i if self.to_s == self.to_s.to_i.to_s
-    return self.to_s.to_f if self.to_s.to_f == self.to_s.to_f.to_s
-    self
+    # Remove all whitespace before doing anything else
+    self.gsub!(/\s/,'')
+
+    # Return an integer if the string is just an integer; can be -ve
+    value = Integer(self) rescue false
+    return value if value
+
+    # Return a variable if the string is just an (unsigned) variable
+    char = self[/\A[\+]?([a-z])\z/,1]
+    return char if char
+
+    # Ensure a sign at the beginning to regularise sign handling for all terms
+    self.prepend('+') unless self[0] == '-'
+
+    # Best approach is to find the top-level operation and terms, then
+    # to objectify each of the terms in turn via recursion
+    # no. of terms in top level can be >= 2, each with same operation
+
+    # Presume addition, and drop to other operations if there's only one term
+    # At this stage, assume no tricky terms
+    # Desired output is a list of terms as strings, with sign as first char
+    term_matcher = '[\+|\-][0-9a-z]+'
+    terms = self.scan(/#{term_matcher}/)
+
+    # Create an addition object if the top level is an addition
+    unless terms.length == 1
+      terms.map!{|term| term.objectify}
+      return Addition.new(terms)
+    end
+
+    # Match all bracketed terms: \((?>[^)(]+|\g<0>)*\)
+    # Match all curly-bracketed terms: \{(?>[^}{]+|\g<0>)*\} needs work before frac becomes useful
   end
 end
