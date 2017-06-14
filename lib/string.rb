@@ -29,11 +29,9 @@ class String
     # Spot and handle a top-level fraction
     if self == self.read_fraction.to_s
       operands = self.scan(/#{Curly_matcher}/)
-      operands.map!{ |operand| operand.objectify }
-      return Division.new(operands)
+      operands.map!{ |operand| recurse_factor(operand) }
+      return div(operands)
     end
-
-    ###### ADDITION HANDLING #####
 
     # Ensure a sign at the beginning to regularise sign handling for terms
     self.prepend('+') unless self[0][/\A[\+|\-]/]
@@ -45,18 +43,19 @@ class String
     # Split the expression into terms and factors, with a sign preceding each term
     terms = self.split_terms
 
+    ###### ADDITION HANDLING #####
+
     # Create an addition object if the top level has addition operations
     unless terms.length == 1
-      terms.map!{ |term| term.join.objectify }
-      return Addition.new(terms)
+      terms.map!{ |term| recurse_factor(term.join) }
+      return add(terms)
     end
+
+    # There's only one term after this point, so change language to reflect that
+    factors = terms.first
 
     ##### MULTIPLICATION HANDLING #####
 
-    # There's only one term, so change language to reflect that
-    factors = terms.first
-
-    # The top level isn't addition, so handle multiplication next
     unless factors.length == 2 && factors.first == '+'
       # Negative sign either becomes a factor of -1, or adds sign to first factor integer
       if factors[0] == '-'
@@ -69,12 +68,12 @@ class String
         factors.shift
       end
       # Create a multiplication object
-      factors.map!{ |factor| factor.objectify }
-      return Multiplication.new(factors)
+      factors.map!{ |factor| recurse_factor(factor) }
+      return mtp(factors)
     end
 
     # Pass through objectification of the single factor in this case
-    return self.objectify
+    return recurse_factor(factors[1])
 
     # sign, term = terms[0][0], terms[0][1..-1]
     # factor_matcher = '[a-z]|[0-9]+'
@@ -114,6 +113,24 @@ class String
         partial = self.match(/#{Alphanumeric_matcher}/, position).to_s
         term_in_progress << partial
         position += partial.length
+      when "^"
+        # Power operator; store base, power and exponent as a sub-array factor
+        base = term_in_progress.pop
+        position += 1
+        if self[position] == "{"
+          # Capture curly-bracketed section as exponent
+          exponent = self.match(/#{Curly_matcher}/, position).to_s
+          position += 1
+        else
+          exponent = self[position]
+        end
+        position += exponent.length
+        term_in_progress << pow(recurse_factor(base), recurse_factor(exponent))
+      # when '{'
+      #   # Curly-bracketed section, to capture
+      #   partial = self.match(/#{Curly_matcher}/, position).to_s
+      #   term_in_progress << partial
+      #   position += partial.length
       when /[+-]/
         # End of term
         terms << term_in_progress
@@ -130,5 +147,14 @@ class String
     frac_string = '\\frac' + self.scan(/#{Curly_matcher}/)[0..1].join
     return nil unless self[0..frac_string.length - 1] == frac_string
     frac_string
+  end
+
+  def recurse_factor factor
+    if factor.is_a? String
+      factor.objectify
+    else
+      factor
+    end
+    # factor.is_a? String ? factor.objectify : factor
   end
 end
