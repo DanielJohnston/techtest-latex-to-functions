@@ -1,6 +1,3 @@
-# This should not need to happen, presumably getting required
-require './app'
-
 describe String do
   describe '#objectify' do
     context 'addition' do
